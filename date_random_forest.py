@@ -3,8 +3,6 @@ import pandas as pd
 import numpy as np
 import string
 import re
-import glob
-import pickle
 from fastparquet import ParquetFile
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
@@ -15,7 +13,8 @@ from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 #clean data - create corpus
 def clean_data(X):
     my_punc=list(string.punctuation)
-    my_punc.remove('#')
+    my_punc.remove('-')
+    my_punc.remove('/')
     my_punc=''.join(my_punc)
     translator = str.maketrans('', '', my_punc)
     
@@ -23,9 +22,6 @@ def clean_data(X):
     for row in X.itertuples():
         text=row.Text
         if text != pd.isnull(text):
-            text = text.replace('/',' ')
-            text = text.replace('-',' ')
-
             text = str(text).translate(translator)
             #text = text.replace('\n',' ')
             text = text.replace(' L_B ',' ')  # in Parquet '\n' == ' L_B '
@@ -38,8 +34,7 @@ def clean_data(X):
 
 #read data
 
-#df = pd.read_csv('Y:/data/suppliers/suppliers_texts.csv')
-dates = ParquetFile('Y:/data/parquet_data/rails_data.parq').to_pandas(columns=['imaginary_id','invoice_date']).dropna()
+dates = ParquetFile('/run/user/1000/gvfs/smb-share:server=nas01.local,share=rnd/data/parquet_data/rails_data.parq').to_pandas(columns=['imaginary_id','invoice_date']).dropna()
 dates['day'] = dates['invoice_date'].str.slice(0,2)
 dates['month'] = dates['invoice_date'].str.slice(3,5)
 dates['year'] = dates['invoice_date'].str.slice(6,10)
@@ -48,11 +43,8 @@ dates = dates[(dates['month'].isin(['01','02','03','04','05','06'])) & (dates['y
 
 print('dates loaded')
 
-#text = ParquetFile('Y:/data/parquet_data/text_extractions_barmoach.parq').to_pandas() ## Parquet file not loading
-path = 'C:/Users/User/DS/parquet/ocr_text_csv/ocr_text*.csv'
-text = pd.concat([pd.read_csv(f, encoding = "ISO-8859-1", usecols=['#imaginary_id','text'], dtype={'#imaginary_id': str, 'text': str}) for f in glob.glob(path)], ignore_index = True)
+text = ParquetFile('/run/user/1000/gvfs/smb-share:server=nas01.local,share=rnd/data/parquet_data/text_extractions_temp.parq').to_pandas()
 text.columns = ['imaginary_id', 'Text']
-
 
 print('text extractions loaded')
 
