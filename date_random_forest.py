@@ -37,7 +37,6 @@ def clean_data(X):
     for row in X.itertuples():
         text=row.Text
         if text != pd.isnull(text):
-        #if '201' in str(text):
             text = str(text).translate(translator)
             #text = ' '.join(word for word in text.split() if len(word) < 10) # remove words longer then the word 'september'
             #text = ' '.join(word for word in text.split() if not word.isdigit() or int(word) < 32) # remove numbers bigger than 31
@@ -55,7 +54,8 @@ def clean_data(X):
 
 
 df = ParquetFile('/run/user/1000/gvfs/smb-share:server=nas01.local,share=rnd/data/parquet_data/date_alg_results_and_ocr.parq').to_pandas()
-df = df.loc[(df['conclusion'] == 'N\A') & (df['post_match_date'] != 'N\A')]
+#df = df.loc[(df['conclusion'] == 'N\A') & (df['post_match_date'] != 'N\A')]
+df = df.loc[df['post_match_date'] != 'N\A']
 
 print('data loaded')
 
@@ -71,19 +71,19 @@ df = df[df['hood'] != '']
 print('invoices to train: ', len(df))
 
 #split data
-y = df['day'] ############################# date part
-X = df[['imaginary_id','Text']]
+y = df['day'].astype('uint8') ############################# date part
+X = df[['imaginary_id','conclusion','Text']]
 X_train,X_test,y_train,y_test = train_test_split(X,y,test_size=0.2,random_state=42)
 
 print('data split')
 
-X_train = clean_data(X_train)
+#X_train = clean_data(X_train)
 
 print('data cleaned')
 
 vectorizer = CountVectorizer(ngram_range=(1, 1), binary=True, lowercase=True, max_features=200) ########### MODEL
-vectorizer.fit(X_train)
-word_matrix = vectorizer.transform(X_train)
+vectorizer.fit(X_train.Text)
+word_matrix = vectorizer.transform(X_train.Text)
 
 print('vectorizer done')
 
@@ -93,12 +93,12 @@ tfidf_matrix = tfidf.transform(word_matrix)
 
 print('tfidf done')
 
-X_test = clean_data(X_test)
-test_word_matrix = vectorizer.transform(X_test)
+#X_test = clean_data(X_test)
+test_word_matrix = vectorizer.transform(X_test.Text)
 test_tfidf_matrix = tfidf.transform(test_word_matrix)
 
 
-clf = RandomForestClassifier(n_estimators = 1000, criterion = 'entropy', random_state = 42,n_jobs=-1) ############ MODEL
+clf = RandomForestClassifier(n_estimators = 250, criterion = 'entropy', random_state = 42,n_jobs=-1) ############ MODEL
 clf.fit(tfidf_matrix, y_train)
 
 print('Random Forest done')
@@ -106,6 +106,7 @@ print('Random Forest done')
 
 
 y_pred = clf.predict(test_tfidf_matrix)
+conc_mat=pd.DataFrame({'imaginary_id':X_test.imaginary_id,'alg_pred':y_pred,'True':y_test, 'omri_alg': X_test.conclusion})
 
 print ('RF:')
 print ('----------------------')
@@ -114,15 +115,8 @@ print ('\tPrecision: %1.3f' % precision_score(y_test, y_pred, average='weighted'
 print ('\tRecall: %1.3f' % recall_score(y_test, y_pred, average='weighted',labels=np.unique(y_pred)))
 
 
-
+"""
 df1 = pd.DataFrame({'x_test': X_test, 'y_test': y_test, 'y_pred': y_pred})
 df1.loc[:, 'is_correct'] = (df1.y_test == df1.y_pred)
 df1.groupby(['y_test','is_correct']).size().unstack()
-
-
 """
-df.loc[:, 'hood'] = clean_data(pd.DataFrame(df.Text))
-df2 = df[['Text', 'hood']]
-df2.to_csv('/home/matan/Documents/code/date/hood.csv')
-"""
-

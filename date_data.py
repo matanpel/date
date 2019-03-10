@@ -29,8 +29,9 @@ high_conf = extractor_data.loc[extractor_data['conclusionConfidence'] > 0.9]
 high_conf_coverage = high_conf.dropna().shape[0] / extractor_data.shape[0]
 overall_coverage = extractor_data.dropna(subset=['conclusion']).shape[0] / extractor_data.shape[0]
 
-print('high_conf_coverage: ' + high_conf_coverage)
+print('high_conf_coverage: ' + str(high_conf_coverage))
 
-print('overall_coverage: ' + overall_coverage)
+print('overall_coverage: ' + str(overall_coverage))
+
 
 
